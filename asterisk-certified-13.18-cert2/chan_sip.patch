@@ -1,0 +1,43 @@
+--- ../../333/asterisk-certified-13.18-cert2/channels/chan_sip.c	2017-12-22 22:30:54.000000000 +0000
++++ chan_sip.c	2021-03-08 18:33:11.762678559 +0000
+@@ -18367,8 +18367,16 @@
+ 	   Needs to be checked
+         */
+ 	tmpf = ast_strdup(sip_get_header(req, "From"));
++	from = get_in_brackets(tmpf);
++	if( !strncasecmp(from, "tel:",4) ){
++		tmpf = ast_strdup(sip_get_header(req, "P-Asserted-Identity"));
++		from = get_in_brackets(tmpf); /* extract */
++		ast_log(LOG_NOTICE, "PATCH: Using P-Asserted-Identity: [%s]\n", from);
++	}
++
++
+ 	if (!ast_strlen_zero(tmpf)) {
+-		from = get_in_brackets(tmpf);
++		/* from = get_in_brackets(tmpf); */
+ 		if (parse_uri_legacy_check(from, "sip:,sips:,tel:", &from, NULL, &domain, NULL)) {
+ 			ast_log(LOG_WARNING, "Not a SIP header (%s)?\n", from);
+ 			return SIP_GET_DEST_INVALID_URI;
+@@ -19256,6 +19264,7 @@
+ {
+ 	char *of, *name, *unused_password, *domain;
+ 	RAII_VAR(char *, ofbuf, NULL, ast_free); /* beware, everyone starts pointing to this */
++	RAII_VAR(char *, ofbuf2, NULL, ast_free);
+ 	RAII_VAR(char *, namebuf, NULL, ast_free);
+ 	enum check_auth_result res = AUTH_DONT_KNOW;
+ 	char calleridname[256];
+@@ -19264,6 +19273,13 @@
+ 	terminate_uri(uri2);	/* trim extra stuff */
+ 
+ 	ofbuf = ast_strdup(sip_get_header(req, "From"));
++	ofbuf2 = ast_strdup(sip_get_header(req, "From"));
++	if (!strncasecmp(get_in_brackets(ofbuf2), "tel:", 4)){
++		ast_log(LOG_NOTICE,"PATCH tel:SCHEMA : USE  P-Asserted-Identity, Instead [From <tel:>]\n");
++		ofbuf = ast_strdup(sip_get_header(req, "P-Asserted-Identity"));
++		
++	}
++
+ 	/* XXX here tries to map the username for invite things */
+ 
+ 	/* strip the display-name portion off the beginning of the FROM header. */
+
